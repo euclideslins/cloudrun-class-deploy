@@ -1,50 +1,48 @@
-name: Deploy to Google Cloud Run
+name: Deploy to GCP Cloud Run
 
 on:
   push:
     branches:
-      - main # Altere para a branch desejada
+      - master # Altere se necessário para sua branch principal
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Passo 1: Checkout do código
-    - name: Checkout repository
+    # Passo 1: Fazer checkout do código
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    # Passo 2: Configure o Google Cloud SDK
-    - name: Set up Google Cloud SDK
+    # Passo 2: Configurar o Google Cloud SDK
+    - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
+        project_id: moto-academy-web
         service_account_key: ${{ secrets.GCP_SA_KEY }}
-        project_id: ${{ secrets.moto-academy-web }}
+        export_default_credentials: true
 
-    # Passo 3: Faça o build da imagem Docker
-    - name: Build Docker image
+    # Passo 3: Configurar autenticação Docker com o Google Container Registry
+    - name: Configure Docker authentication
+      run: gcloud auth configure-docker gcr.io
+
+    # Passo 4: Buildar e fazer o push da imagem Docker
+    - name: Build and push Docker image
+      env:
+        IMAGE_NAME: gcr.io/moto-academy-web/node-cloud-sql
+        TAG: ${{ github.sha }}
       run: |
-        IMAGE_NAME=gcr.io/${{ secrets.moto-academy-web }}/node-cloud-sql
-        docker build -t $IMAGE_NAME .
-        echo "::set-output name=image::$IMAGE_NAME"
+        docker build -t $IMAGE_NAME:$TAG .
+        docker push $IMAGE_NAME:$TAG
 
-    # Passo 4: Autentique o Docker no GCR
-    - name: Authenticate Docker to Google Cloud Registry
-      run: |
-        echo "${{ secrets.GCP_SA_KEY }}" | docker login -u _json_key --password-stdin https://gcr.io
-
-    # Passo 5: Publique a imagem no GCR
-    - name: Push Docker image to Google Container Registry
-      run: |
-        IMAGE_NAME=gcr.io/${{ secrets.moto-academy-web }}/node-cloud-sql
-        docker push $IMAGE_NAME
-
-    # Passo 6: Faça o deploy para o Cloud Run
+    # Passo 5: Deploy no Cloud Run
     - name: Deploy to Cloud Run
+      env:
+        IMAGE_NAME: gcr.io/moto-academy-web/node-cloud-sql
+        TAG: ${{ github.sha }}
       run: |
         gcloud run deploy node-cloud-sql \
-          --image gcr.io/${{ secrets.moto-academy-web }}/node-cloud-sql \
-          --region us-central1 \
+          --image $IMAGE_NAME:$TAG \
           --platform managed \
-          --allow-unauthenticated \
-          --add-cloudsql-instances moto-academy-web:us-central1:euclideslins
+          --region us-central1 \
+          --allow-unauthenticated

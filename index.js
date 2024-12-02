@@ -15,6 +15,8 @@ const dbConfig = {
 };
 
 
+console.log("oi");
+
 const connection = mysql.createConnection(dbConfig);
 
 app.get('/', (req, res) => {
