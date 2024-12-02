@@ -3,18 +3,16 @@ name: Deploy to GCP Cloud Run
 on:
   push:
     branches:
-      - master # Altere se necessário para sua branch principal
+      - master 
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Passo 1: Fazer checkout do código
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Passo 2: Configurar o Google Cloud SDK
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
@@ -22,11 +20,9 @@ jobs:
         service_account_key: ${{ secrets.GCP_SA_KEY }}
         export_default_credentials: true
 
-    # Passo 3: Configurar autenticação Docker com o Google Container Registry
     - name: Configure Docker authentication
       run: gcloud auth configure-docker gcr.io
 
-    # Passo 4: Buildar e fazer o push da imagem Docker
     - name: Build and push Docker image
       env:
         IMAGE_NAME: gcr.io/moto-academy-web/node-cloud-sql
@@ -35,7 +31,6 @@ jobs:
         docker build -t $IMAGE_NAME:$TAG .
         docker push $IMAGE_NAME:$TAG
 
-    # Passo 5: Deploy no Cloud Run
     - name: Deploy to Cloud Run
       env:
         IMAGE_NAME: gcr.io/moto-academy-web/node-cloud-sql

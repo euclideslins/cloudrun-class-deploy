@@ -14,10 +14,10 @@ const dbConfig = {
     : { host: process.env.DB_HOST }),
 };
 
-
-console.log("oi5");
-
 const connection = mysql.createConnection(dbConfig);
+
+console.log("Ola mundo");
+
 
 app.get('/', (req, res) => {
   connection.query('SELECT * from aluno', (error, results) => {
