@@ -1,36 +1,50 @@
-name: Deploy to GCP Cloud Run
+name: Deploy to Google Cloud Run
 
 on:
   push:
     branches:
-      - master 
+      - main # Altere para a branch desejada
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    # Passo 1: Checkout do código
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Cloud SDK
+    # Passo 2: Configure o Google Cloud SDK
+    - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
-        project_id: moto-academy-web
         service_account_key: ${{ secrets.GCP_SA_KEY }}
-        export_default_credentials: true
+        project_id: ${{ secrets.moto-academy-web }}
 
-    - name: Configure Docker authentication
-      run: gcloud auth configure-docker
-
-    - name: Build and push Docker image
+    # Passo 3: Faça o build da imagem Docker
+    - name: Build Docker image
       run: |
-        docker build -t gcr.io/moto-academy-web/node-cloud-sql:$GITHUB_SHA .
-        docker push gcr.io/moto-academy-web/node-cloud-sql:$GITHUB_SHA
+        IMAGE_NAME=gcr.io/${{ secrets.moto-academy-web }}/node-cloud-sql
+        docker build -t $IMAGE_NAME .
+        echo "::set-output name=image::$IMAGE_NAME"
 
+    # Passo 4: Autentique o Docker no GCR
+    - name: Authenticate Docker to Google Cloud Registry
+      run: |
+        echo "${{ secrets.GCP_SA_KEY }}" | docker login -u _json_key --password-stdin https://gcr.io
+
+    # Passo 5: Publique a imagem no GCR
+    - name: Push Docker image to Google Container Registry
+      run: |
+        IMAGE_NAME=gcr.io/${{ secrets.moto-academy-web }}/node-cloud-sql
+        docker push $IMAGE_NAME
+
+    # Passo 6: Faça o deploy para o Cloud Run
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy node-cloud-sql \
-          --image gcr.io/moto-academy-web/node-cloud-sql:$GITHUB_SHA \
-          --platform managed \
+          --image gcr.io/${{ secrets.moto-academy-web }}/node-cloud-sql \
           --region us-central1 \
-          --allow-unauthenticated
+          --platform managed \
+          --allow-unauthenticated \
+          --add-cloudsql-instances moto-academy-web:us-central1:euclideslins
