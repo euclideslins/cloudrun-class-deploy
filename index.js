@@ -15,7 +15,7 @@ const dbConfig = {
 };
 
 
-console.log("oi3");
+console.log("oi4");
 
 const connection = mysql.createConnection(dbConfig);
 
