@@ -13,6 +13,8 @@ const dbConfig = {
     ? { socketPath: `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}` }
     : { host: process.env.DB_HOST }),
 };
+
+
 const connection = mysql.createConnection(dbConfig);
 
 app.get('/', (req, res) => {
